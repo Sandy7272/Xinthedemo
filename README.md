@@ -12,10 +12,10 @@ A production-quality frontend demo of an **AI Image-to-3D product workflow**: pi
 
 | Route | What it is |
 | --- | --- |
-| `/` | Marketing landing page for the studio. |
-| `/dashboard` | **Variant Studio** — the guided 5-step demo. *This is the one to share.* |
+| `/` | **Variant Studio** — the guided 5-step demo. |
+| `/dashboard` | Redirects to `/` (kept for previously shared links). |
 
-## The guided studio flow (`/dashboard`)
+## The guided studio flow
 
 1. **Gallery** — choose a sample product (red sweatshirt or classic cap) or upload your own image.
 2. **Reconstruct** — an animated 9-stage Image-to-3D pipeline (detection → segmentation → geometry → texture baking → GLB export).

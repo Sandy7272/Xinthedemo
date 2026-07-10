@@ -9,9 +9,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Image-to-3D Studio — AI Product Visualization",
+  title: "EasyVariants · Variant Studio",
   description:
-    "Transform product images into production-ready, web-optimized 3D models with an AI-powered reconstruction workflow. Interactive demo for e-commerce and product visualization.",
+    "Convert product images into production-ready 3D assets. Interactive studio for image-to-3D reconstruction, PBR variants, virtual try-on and export.",
   keywords: [
     "Image to 3D",
     "AI 3D reconstruction",
@@ -21,9 +21,9 @@ export const metadata: Metadata = {
     "e-commerce 3D",
     "PBR materials",
   ],
-  authors: [{ name: "Portfolio" }],
+  authors: [{ name: "Sandesh Gadakh" }],
   openGraph: {
-    title: "Image-to-3D Studio — AI Product Visualization",
+    title: "EasyVariants · Variant Studio",
     description:
       "An AI-powered workflow for generating interactive, web-ready 3D assets from product photos.",
     type: "website",

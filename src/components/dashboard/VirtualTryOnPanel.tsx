@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type DragEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Shirt,
-  Check,
+  UploadCloud,
   Sparkles,
   ShieldCheck,
   RefreshCw,
@@ -14,10 +14,8 @@ import {
 } from "lucide-react";
 import { Panel } from "./ui/Panel";
 import { TryOnScene } from "@/components/tryon/TryOnScenes";
-import {
-  SAMPLE_PERSON_IMAGES,
-  type SampleImage,
-} from "@/lib/easyvariants/config";
+import { FileExplorerModal } from "./ui/FileExplorerModal";
+import { SAMPLE_PERSON_IMAGES } from "@/lib/easyvariants/config";
 import { useWizard } from "./wizard/wizard-context";
 import { cn } from "@/lib/cn";
 
@@ -92,8 +90,17 @@ export function VirtualTryOnPanel() {
   const [step, setStep] = useState(0);
   const [photo, setPhoto] = useState<string | null>(null);
   const [resultSrc, setResultSrc] = useState<string | null>(null);
+  const [photoIsObjectUrl, setPhotoIsObjectUrl] = useState(false);
+  const [explorerOpen, setExplorerOpen] = useState(false);
+  const [dragging, setDragging] = useState(false);
 
-  // Explicit trigger — the user picks a model, then presses the button.
+  useEffect(() => {
+    return () => {
+      if (photo && photoIsObjectUrl) URL.revokeObjectURL(photo);
+    };
+  }, [photo, photoIsObjectUrl]);
+
+  // Explicit trigger — the user uploads a photo, then presses the button.
   const run = useCallback(() => {
     if (!photo) return;
     setStatus("loading");
@@ -110,21 +117,40 @@ export function VirtualTryOnPanel() {
     }, 800);
   }, [photo]);
 
-  // Sample-only picker: the baked result depends on the product being tried on
-  // (red shirt → model1_, cap → model1__, …).
-  const pickPerson = useCallback(
-    (img: SampleImage) => {
-      setPhoto(img.src ?? null);
-      setResultSrc(img.results?.[product.id] ?? img.src ?? null);
+  const setNewPhoto = useCallback(
+    (src: string | null, isObjectUrl: boolean, result?: string | null) => {
+      if (photo && photoIsObjectUrl) URL.revokeObjectURL(photo);
+      setPhoto(src);
+      // Mapped generated result (e.g. model1 → model1_) or the photo itself.
+      setResultSrc(result ?? src);
+      setPhotoIsObjectUrl(isObjectUrl);
       setStatus("idle"); // wait for the user to press the button
     },
-    [product.id],
+    [photo, photoIsObjectUrl],
+  );
+
+  const onFile = useCallback(
+    (file: File) => {
+      if (!file.type.startsWith("image/")) return;
+      const url = URL.createObjectURL(file);
+      setNewPhoto(url, true, url);
+    },
+    [setNewPhoto],
   );
 
   const reset = () => {
+    if (photo && photoIsObjectUrl) URL.revokeObjectURL(photo);
     setPhoto(null);
     setResultSrc(null);
+    setPhotoIsObjectUrl(false);
     setStatus("idle");
+  };
+
+  const onDrop = (e: DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) onFile(file);
   };
 
   const download = () => {
@@ -160,42 +186,47 @@ export function VirtualTryOnPanel() {
           </div>
         </div>
 
-        {/* 2. Choose a person (sample models only) */}
+        {/* 2. Upload person photo */}
         <div>
-          <StepLabel n={2}>Choose a Person</StepLabel>
-          <div className={cn("grid grid-cols-2 gap-3", BOX)}>
-            {SAMPLE_PERSON_IMAGES.map((img, i) => {
-              const active = photo === img.src;
-              return (
-                <button
-                  key={img.id}
-                  type="button"
-                  onClick={() => pickPerson(img)}
-                  className={cn(
-                    "relative overflow-hidden rounded-2xl border bg-surface-subtle transition-all duration-200",
-                    active
-                      ? "border-brand-500 ring-2 ring-brand-200"
-                      : "border-line hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-card",
-                  )}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={img.src}
-                    alt={`Model ${i + 1}`}
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                  {active && (
-                    <span className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-[#12b76a] text-white shadow-glow">
-                      <Check className="h-3.5 w-3.5" />
-                    </span>
-                  )}
-                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent px-2.5 pb-1.5 pt-4 text-left text-[11px] font-semibold text-white">
-                    {active ? "Selected" : `Model ${i + 1}`}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          <StepLabel n={2}>Upload Person Photo</StepLabel>
+          <button
+            type="button"
+            onClick={() => setExplorerOpen(true)}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={onDrop}
+            className={cn(
+              "flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed text-center transition-colors",
+              BOX,
+              dragging
+                ? "border-brand-500 bg-brand-50"
+                : "border-line bg-surface-subtle hover:border-ink/25 hover:bg-white",
+            )}
+          >
+            {photo ? (
+              <span className="relative h-full w-full overflow-hidden rounded-2xl bg-surface-subtle">
+                <SmartImage src={photo} styled={false} alt="Uploaded" fit="contain" />
+                <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/50 to-transparent px-2 py-1.5 text-[11px] font-medium text-white">
+                  Click to change
+                </span>
+              </span>
+            ) : (
+              <>
+                <span className="grid h-11 w-11 place-items-center rounded-2xl bg-ink text-white shadow-soft">
+                  <UploadCloud className="h-5 w-5" />
+                </span>
+                <span className="mt-3 text-[13px] font-semibold text-ink">
+                  Drop your photo here
+                </span>
+                <span className="mt-1 text-[11px] text-ink-faint">
+                  or click to browse · JPG, PNG
+                </span>
+              </>
+            )}
+          </button>
         </div>
 
         {/* 3. Result */}
@@ -261,7 +292,7 @@ export function VirtualTryOnPanel() {
                     <p className="max-w-[210px] text-[11.5px] leading-relaxed text-ink-muted">
                       {photo
                         ? "Press Virtual Try-On below to see it worn."
-                        : "Choose a person to preview the product on a model."}
+                        : "Upload a photo or pick a sample model to preview."}
                     </p>
                   </div>
                 </motion.div>
@@ -298,7 +329,7 @@ export function VirtualTryOnPanel() {
                 className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink"
               >
                 <RefreshCw className="h-4 w-4" />
-                Try another model
+                Try another photo
               </button>
             </>
           ) : (
@@ -330,9 +361,22 @@ export function VirtualTryOnPanel() {
 
         <p className="flex items-center gap-2 text-center text-[11.5px] leading-relaxed text-ink-muted">
           <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-ink-faint" />
-          Mock try-on for UX only — no AI inference. Everything runs in your browser.
+          Mock try-on for UX only — no AI inference. Your photo stays in your browser.
         </p>
       </div>
+
+      <FileExplorerModal
+        open={explorerOpen}
+        onClose={() => setExplorerOpen(false)}
+        images={SAMPLE_PERSON_IMAGES}
+        title="Select a person image"
+        onPick={(img) =>
+          // The baked result depends on the product being tried on
+          // (red shirt → model1_, cap → model1__, …).
+          setNewPhoto(img.src ?? null, false, img.results?.[product.id] ?? img.src ?? null)
+        }
+        onUploadFile={(file) => onFile(file)}
+      />
     </Panel>
   );
 }
