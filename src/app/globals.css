@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --page-max: 1200px;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-white text-ink font-sans antialiased;
+    background-color: #ffffff;
+  }
+
+  ::selection {
+    background-color: rgba(51, 102, 255, 0.14);
+    color: #0a0a0b;
+  }
+
+  /* Refined focus ring for accessibility */
+  :focus-visible {
+    outline: 2px solid rgba(51, 102, 255, 0.6);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+}
+
+@layer components {
+  .container-page {
+    width: 100%;
+    max-width: var(--page-max);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .eyebrow {
+    @apply inline-flex items-center gap-2 rounded-full border border-line bg-surface-subtle px-3 py-1 text-xs font-medium tracking-wide text-ink-muted;
+  }
+
+  /* Subtle background grid used behind hero / demo */
+  .bg-dot-grid {
+    background-image: radial-gradient(
+      circle at center,
+      rgba(9, 9, 11, 0.05) 1px,
+      transparent 1px
+    );
+    background-size: 28px 28px;
+  }
+
+  .text-gradient {
+    background: linear-gradient(120deg, #0a0a0b 0%, #1f47f5 55%, #0a0a0b 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Custom range slider thumb (used in the viewer material controls) */
+.range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 18px;
+  width: 18px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 2px solid #0a0a0b;
+  box-shadow: 0 1px 4px rgba(9, 9, 11, 0.2);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  margin-top: -1px;
+}
+.range-input::-webkit-slider-thumb:hover {
+  transform: scale(1.12);
+}
+.range-input::-moz-range-thumb {
+  height: 18px;
+  width: 18px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 2px solid #0a0a0b;
+  box-shadow: 0 1px 4px rgba(9, 9, 11, 0.2);
+  cursor: pointer;
+}
+.range-input::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+}
+
+/* Viewer fullscreen: fill the screen and reset the rounded corners */
+.viewer-stage:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+  border: 0;
+}
+.viewer-stage:fullscreen > div:first-child {
+  height: 100% !important;
+}
+
+/* Respect reduced motion preferences globally */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
