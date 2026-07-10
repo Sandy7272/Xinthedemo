@@ -238,17 +238,30 @@ export function VirtualTryOnPanel() {
                 </motion.div>
               ) : (
                 <motion.div
-                  key="idle"
+                  key={photo ? "armed" : "idle"}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="absolute inset-0 grid place-items-center bg-surface-subtle"
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-surface-subtle p-3"
                 >
-                  <div className="flex flex-col items-center gap-2 text-center">
-                    <span className="grid h-11 w-11 place-items-center rounded-full bg-brand-50 text-brand-500">
+                  <div className="flex h-full w-full flex-col items-center justify-center gap-2.5 rounded-xl border-2 border-dashed border-line text-center">
+                    <span
+                      className={cn(
+                        "grid h-11 w-11 place-items-center rounded-full",
+                        photo
+                          ? "animate-float bg-brand-500 text-white shadow-glow"
+                          : "bg-brand-50 text-brand-500",
+                      )}
+                    >
                       <Sparkles className="h-5 w-5" />
                     </span>
-                    <p className="text-[12px] font-medium text-ink-muted">
-                      Magic happens here
+                    <p className="text-[13px] font-semibold text-ink">
+                      {photo ? "Ready to generate" : "Your preview appears here"}
+                    </p>
+                    <p className="max-w-[210px] text-[11.5px] leading-relaxed text-ink-muted">
+                      {photo
+                        ? "Press Virtual Try-On below to see it worn."
+                        : "Choose a person to preview the product on a model."}
                     </p>
                   </div>
                 </motion.div>

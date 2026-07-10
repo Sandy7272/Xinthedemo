@@ -73,8 +73,13 @@ export function StudioWizard() {
       <TopBar />
       <Stepper />
 
-      <main className="min-h-0 flex-1 lg:overflow-hidden">
-        <div className="mx-auto flex w-full max-w-6xl flex-col px-4 py-4 sm:px-6 sm:py-5 lg:h-full lg:px-8">
+      <main className="relative min-h-0 flex-1 lg:overflow-hidden">
+        {/* Ambient background — subtle dot grid + brand glow for depth. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute inset-0 bg-dot-grid opacity-50" />
+          <div className="absolute left-1/2 top-[-190px] h-[380px] w-[760px] -translate-x-1/2 rounded-full bg-brand-100/40 blur-[110px]" />
+        </div>
+        <div className="relative mx-auto flex w-full max-w-6xl flex-col px-4 py-4 sm:px-6 sm:py-5 lg:h-full lg:px-8">
           <div className="relative flex-1 lg:min-h-0 lg:overflow-y-auto lg:no-scrollbar">
             {step === 2 || step === 3 ? (
               <ViewerBlock step={step} />
@@ -207,7 +212,15 @@ function TopBar() {
 function Stepper() {
   const { step, maxReached, goTo } = useWizard();
   return (
-    <div className="shrink-0 border-b border-line bg-white">
+    <div className="relative shrink-0 border-b border-line bg-white">
+      {/* Animated progress underline — fills as the user advances. */}
+      <motion.div
+        aria-hidden
+        className="absolute bottom-0 left-0 h-[2.5px] rounded-r-full bg-gradient-to-r from-brand-400 to-brand-600"
+        initial={false}
+        animate={{ width: `${(step / (WIZARD_STEPS.length - 1)) * 100}%` }}
+        transition={{ type: "spring", stiffness: 130, damping: 24 }}
+      />
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <ol className="no-scrollbar flex items-center gap-1 overflow-x-auto py-3">
           {WIZARD_STEPS.map((s, i) => {
@@ -339,10 +352,10 @@ function FooterNav() {
               whileTap={primary.disabled ? undefined : { scale: 0.97 }}
               transition={{ type: "spring", stiffness: 400, damping: 26 }}
               className={cn(
-                "inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-glow",
+                "inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-colors",
                 primary.disabled
                   ? "cursor-not-allowed bg-brand-500/40"
-                  : "bg-brand-500 hover:bg-brand-600",
+                  : "bg-gradient-to-b from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700",
               )}
             >
               <primary.icon className="h-4 w-4" />

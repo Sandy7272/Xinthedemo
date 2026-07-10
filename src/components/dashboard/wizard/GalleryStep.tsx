@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import {
   Check,
   Sparkles,
@@ -41,7 +42,7 @@ function ProductCard({
           : "border-line hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-card",
       )}
     >
-      <div className={cn("relative overflow-hidden", BOX)}>
+      <div className={cn("relative overflow-hidden bg-surface-muted", BOX)}>
         <span className="absolute left-4 top-4 z-10 inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-[12px] font-semibold text-brand-700">
           <Sparkles className="h-3.5 w-3.5" />
           Sample
@@ -79,7 +80,14 @@ function ProductCard({
             <p className="truncate text-[13px] font-semibold text-ink">
               {product.label}
             </p>
-            <p className="text-[11px] text-ink-faint">Sample product</p>
+            <span className="mt-1 flex items-center gap-1">
+              <span className="rounded-md bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700">
+                3D Model
+              </span>
+              <span className="rounded-md bg-surface-muted px-1.5 py-0.5 text-[10px] font-semibold text-ink-muted">
+                Try-On
+              </span>
+            </span>
           </div>
         </div>
         <span
@@ -110,8 +118,16 @@ export function GalleryStep() {
   const hasSelection = PRODUCTS.some((p) => p.name === sourceName);
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <div className="mb-6 text-center">
+    <motion.div
+      initial="hidden"
+      animate="show"
+      variants={{ show: { transition: { staggerChildren: 0.08 } } }}
+      className="mx-auto w-full max-w-3xl"
+    >
+      <motion.div
+        variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
+        className="mb-6 text-center"
+      >
         <h2 className="inline-flex items-start gap-1 text-2xl font-semibold tracking-tight text-ink sm:text-[28px]">
           Choose a product
           <Sparkles className="mt-1 h-5 w-5 text-brand-500" />
@@ -119,21 +135,29 @@ export function GalleryStep() {
         <p className="mt-2 text-[14px] text-ink-muted">
           Pick a sample product to generate its 3D model.
         </p>
-      </div>
+      </motion.div>
 
       <div className="grid gap-5 sm:grid-cols-2">
         {PRODUCTS.map((product) => (
-          <ProductCard
+          <motion.div
             key={product.id}
-            product={product}
-            active={sourceName === product.name}
-            onSelect={() => selectProduct(product)}
-          />
+            variants={{
+              hidden: { opacity: 0, y: 14 },
+              show: { opacity: 1, y: 0 },
+            }}
+          >
+            <ProductCard
+              product={product}
+              active={sourceName === product.name}
+              onSelect={() => selectProduct(product)}
+            />
+          </motion.div>
         ))}
       </div>
 
       {/* Selection nudge — swaps to a "ready" note once a product is picked. */}
-      <div
+      <motion.div
+        variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
         className={cn(
           "mt-5 flex items-center gap-3 rounded-2xl border px-4 py-3 transition-colors",
           hasSelection
@@ -167,7 +191,7 @@ export function GalleryStep() {
               : "Click a sample card above — the Convert to 3D button unlocks once one is selected."}
           </p>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
