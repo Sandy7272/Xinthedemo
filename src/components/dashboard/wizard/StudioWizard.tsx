@@ -17,7 +17,7 @@ import { useWizard } from "./wizard-context";
 import { WIZARD_STEPS } from "./steps";
 import { GalleryStep } from "./GalleryStep";
 import { ProcessingStep } from "./ProcessingStep";
-import { ModelRail } from "./ModelRail";
+import { LightingRail } from "./LightingRail";
 import { TechShowcase } from "./TechShowcase";
 import { VariantPanel } from "../VariantPanel";
 import { VirtualTryOnPanel } from "../VirtualTryOnPanel";
@@ -133,7 +133,7 @@ function ViewerBlock({ step }: { step: number }) {
         title={step === 2 ? "Your 3D model" : "Customize variants"}
         subtitle={
           step === 2
-            ? "Drag to rotate · scroll to zoom. Continue when you're happy."
+            ? "Drag to rotate · scroll to zoom · shape the lighting on the right."
             : "Swap colour, fabric and logo — the model updates instantly."
         }
       />
@@ -144,8 +144,8 @@ function ViewerBlock({ step }: { step: number }) {
         <div className="no-scrollbar lg:min-h-0 lg:overflow-y-auto">
           <AnimatePresence mode="wait" initial={false}>
             {step === 2 ? (
-              <motion.div key="rail-model" className="lg:h-full" {...fade}>
-                <ModelRail />
+              <motion.div key="rail-lighting" className="lg:h-full" {...fade}>
+                <LightingRail />
               </motion.div>
             ) : (
               <motion.div key="rail-variants" {...fade}>

@@ -58,6 +58,21 @@ const DEFAULT_MATERIALS: Materials = {
   background: "#f4f5f7",
 };
 
+/** Where the key light sits relative to the model (viewer's perspective). */
+export type LightDirection = "left" | "top" | "right";
+
+export type Lighting = {
+  direction: LightDirection;
+  intensity: number; // key light + reflections multiplier (1 = default)
+  ambient: number; // ambient fill multiplier (1 = default)
+};
+
+const DEFAULT_LIGHTING: Lighting = {
+  direction: "top",
+  intensity: 1,
+  ambient: 1,
+};
+
 export type ViewerApi = {
   gl: THREE.WebGLRenderer;
   scene: THREE.Scene;
@@ -106,6 +121,10 @@ type StudioValue = {
   materials: Materials;
   setMaterials: (patch: Partial<Materials>) => void;
   resetMaterials: () => void;
+  // lighting controls (3D viewer)
+  lighting: Lighting;
+  setLighting: (patch: Partial<Lighting>) => void;
+  resetLighting: () => void;
   // shared three.js handles for export / screenshot
   viewerRef: MutableRefObject<ViewerApi | null>;
 };
@@ -155,6 +174,18 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   );
   const resetMaterials = useCallback(
     () => setMaterialsState(DEFAULT_MATERIALS),
+    [],
+  );
+
+  // ── Lighting controls (direction + intensity for the 3D viewer) ──
+  const [lighting, setLightingState] = useState<Lighting>(DEFAULT_LIGHTING);
+  const setLighting = useCallback(
+    (patch: Partial<Lighting>) =>
+      setLightingState((prev) => ({ ...prev, ...patch })),
+    [],
+  );
+  const resetLighting = useCallback(
+    () => setLightingState(DEFAULT_LIGHTING),
     [],
   );
 
@@ -372,6 +403,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     materials,
     setMaterials,
     resetMaterials,
+    lighting,
+    setLighting,
+    resetLighting,
     viewerRef,
   };
 

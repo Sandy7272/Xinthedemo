@@ -45,8 +45,16 @@ function CanvasLoader() {
 }
 
 export default function ProductViewer() {
-  const { baseColor, materials, toggles, fabricId, logoId, viewerRef, status } =
-    useStudio();
+  const {
+    baseColor,
+    materials,
+    toggles,
+    fabricId,
+    logoId,
+    viewerRef,
+    status,
+    lighting,
+  } = useStudio();
   const { product } = useWizard();
 
   const stageRef = useRef<HTMLDivElement>(null);
@@ -67,7 +75,8 @@ export default function ProductViewer() {
     wireframe: toggles.wireframe,
     normals: toggles.normals,
     normalScale: toggles.textures ? fabric.normalScale : 0,
-    envIntensity: materials.envIntensity,
+    // The lighting slider scales reflections too, so brightness reacts strongly.
+    envIntensity: materials.envIntensity * lighting.intensity,
     textures: toggles.textures,
     logoMonogram: logo.monogram,
   };
@@ -178,6 +187,7 @@ export default function ProductViewer() {
               environment={ENV_PRESETS[env]}
               studioBackground={toggles.studio}
               ao={toggles.ao}
+              lighting={lighting}
             />
           </Suspense>
           <OrbitControls

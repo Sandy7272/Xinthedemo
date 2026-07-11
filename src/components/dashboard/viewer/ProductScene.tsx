@@ -7,6 +7,7 @@ import { EffectComposer, Bloom, N8AO, ToneMapping } from "@react-three/postproce
 import { ToneMappingMode } from "postprocessing";
 import * as THREE from "three";
 import { GarmentModel, type GarmentProps } from "./GarmentModel";
+import type { Lighting, LightDirection } from "../studio-context";
 
 /** A lighting environment — drives background, lights and the studio softboxes. */
 export type EnvPreset = {
@@ -97,6 +98,21 @@ export type ProductSceneProps = {
   environment: EnvPreset;
   studioBackground: boolean;
   ao: boolean;
+  lighting: Lighting;
+};
+
+/** Key light position per direction, relative to the viewer's start camera. */
+const KEY_LIGHT_POS: Record<LightDirection, [number, number, number]> = {
+  left: [-7, 3.5, 2.5],
+  top: [0, 8, 2],
+  right: [7, 3.5, 2.5],
+};
+
+/** The main softbox follows the chosen direction so reflections match. */
+const KEY_FORMER_POS: Record<LightDirection, [number, number, number]> = {
+  left: [-5, 2.5, 2],
+  top: [0, 5, 2],
+  right: [5, 2.5, 2],
 };
 
 function ExposureBridge({ exposure }: { exposure: number }) {
@@ -114,6 +130,7 @@ export function ProductScene({
   environment,
   studioBackground,
   ao,
+  lighting,
 }: ProductSceneProps) {
   const fi = environment.formerIntensity;
 
@@ -124,12 +141,12 @@ export function ProductScene({
       {studioBackground && <color attach="background" args={[environment.bg]} />}
 
       <ambientLight
-        intensity={environment.ambientIntensity}
+        intensity={environment.ambientIntensity * lighting.ambient}
         color={environment.ambient}
       />
       <directionalLight
-        position={[5, 8, 4]}
-        intensity={environment.keyIntensity}
+        position={KEY_LIGHT_POS[lighting.direction]}
+        intensity={environment.keyIntensity * lighting.intensity}
         color={environment.keyColor}
         castShadow
       />
@@ -152,8 +169,14 @@ export function ProductScene({
         color="#0a0a0b"
       />
 
-      <Environment resolution={256} background={!studioBackground} blur={0.6}>
-        <Lightformer form="rect" intensity={3 * fi} position={[0, 4, 3]} scale={[9, 5, 1]} color={environment.keyColor} />
+      {/* Keyed on preset + light direction so the static env map re-renders. */}
+      <Environment
+        key={`${environment.id}-${lighting.direction}`}
+        resolution={256}
+        background={!studioBackground}
+        blur={0.6}
+      >
+        <Lightformer form="rect" intensity={3 * fi} position={KEY_FORMER_POS[lighting.direction]} target={[0, 0, 0]} scale={[9, 5, 1]} color={environment.keyColor} />
         <Lightformer form="rect" intensity={1.2 * fi} position={[-5, 1.5, -2]} scale={[5, 5, 1]} color={environment.fillColor} />
         <Lightformer form="ring" intensity={1.6 * fi} position={[5, 3, -3]} scale={3} color={environment.keyColor} />
         <Lightformer form="circle" intensity={0.9 * fi} position={[0, -4, 1]} scale={4} color={environment.fillColor} />
