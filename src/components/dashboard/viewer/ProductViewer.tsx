@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import {
   OrbitControls,
@@ -9,7 +9,6 @@ import {
   Html,
 } from "@react-three/drei";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
-import * as THREE from "three";
 import {
   Box,
   Maximize2,
@@ -19,10 +18,16 @@ import {
   Crosshair,
 } from "lucide-react";
 import { ProductScene, ENV_PRESETS } from "./ProductScene";
+import { CameraRig, HOME_CAMERA_POSITION } from "./CameraRig";
+import { PerfTracker, PerfOverlay } from "./inspector/PerformancePanel";
 import { ViewerToolbar } from "../ViewerToolbar";
 import { ReconstructionOverlay } from "../ReconstructionOverlay";
 import { useStudio } from "../studio-context";
 import { useWizard } from "../wizard/wizard-context";
+import {
+  QUALITY_PRESETS,
+  useViewerSettings,
+} from "./viewer-settings-context";
 import { FABRIC_PRESETS, LOGO_OPTIONS } from "@/lib/easyvariants/config";
 import { downloadDataUrl } from "@/lib/easyvariants/exporters";
 import type { GarmentProps } from "./GarmentModel";
@@ -32,6 +37,19 @@ const RES_OPTIONS: { label: string; dpr: number }[] = [
   { label: "Full HD", dpr: 1.75 },
   { label: "4K", dpr: 2 },
 ];
+
+/** Stage underlays rendered in the DOM behind the (alpha) canvas. */
+const STAGE_STYLES: Record<string, React.CSSProperties> = {
+  // Checkerboard = universal "this is transparent" affordance.
+  transparent: {
+    background:
+      "repeating-conic-gradient(#e9eaee 0% 25%, #ffffff 0% 50%) 0 0 / 22px 22px",
+  },
+  gradient: {
+    background:
+      "linear-gradient(180deg, #f8f9fb 0%, #e3e7ed 55%, #c9cfd9 100%)",
+  },
+};
 
 function CanvasLoader() {
   return (
@@ -56,13 +74,17 @@ export default function ProductViewer() {
     lighting,
   } = useStudio();
   const { product } = useWizard();
+  const settings = useViewerSettings();
 
   const stageRef = useRef<HTMLDivElement>(null);
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
-  const [dpr, setDpr] = useState(1.25);
-  const [perfDpr, setPerfDpr] = useState(1.25);
   const [resLabel, setResLabel] = useState("HD");
   const [env, setEnv] = useState(0);
+
+  const qualityCfg = QUALITY_PRESETS[settings.quality];
+  const { dpr, setDpr } = settings;
+  // What the adaptive PerformanceMonitor restores to after a decline.
+  const baseDprRef = useRef(dpr);
 
   const fabric = FABRIC_PRESETS.find((f) => f.id === fabricId) ?? FABRIC_PRESETS[0];
   const logo = LOGO_OPTIONS.find((l) => l.id === logoId) ?? LOGO_OPTIONS[0];
@@ -79,9 +101,20 @@ export default function ProductViewer() {
     envIntensity: materials.envIntensity * lighting.intensity,
     textures: toggles.textures,
     logoMonogram: logo.monogram,
+    physical: settings.physical,
+    anisotropy: qualityCfg.anisotropy,
   };
 
-  const resetCamera = useCallback(() => controlsRef.current?.reset(), []);
+  // Quality preset changes re-baseline the adaptive DPR.
+  useEffect(() => {
+    baseDprRef.current = qualityCfg.dpr;
+  }, [qualityCfg.dpr]);
+
+  const resetCamera = useCallback(() => {
+    // Smooth fly-home via the rig; hard reset as fallback before it mounts.
+    if (settings.cameraApiRef.current) settings.cameraApiRef.current.reset();
+    else controlsRef.current?.reset();
+  }, [settings.cameraApiRef]);
 
   const toggleFullscreen = useCallback(() => {
     const el = stageRef.current;
@@ -93,7 +126,9 @@ export default function ProductViewer() {
   const screenshot = useCallback(() => {
     const api = viewerRef.current;
     if (!api) return;
-    api.gl.render(api.scene, api.camera);
+    // The canvas keeps its last presented frame (preserveDrawingBuffer), which
+    // already includes tone mapping + post effects — re-rendering here with
+    // gl.render() would bypass the composer and wash the image out.
     downloadDataUrl(api.gl.domElement.toDataURL("image/png"), "easyvariants-render.png");
   }, [viewerRef]);
 
@@ -101,7 +136,7 @@ export default function ProductViewer() {
     const opt = RES_OPTIONS.find((r) => r.label === label) ?? RES_OPTIONS[0];
     setResLabel(label);
     setDpr(opt.dpr);
-    setPerfDpr(opt.dpr);
+    baseDprRef.current = opt.dpr;
   };
 
   return (
@@ -159,15 +194,17 @@ export default function ProductViewer() {
       <div
         ref={stageRef}
         className="viewer-stage relative min-h-[280px] flex-1 bg-surface-subtle"
+        style={STAGE_STYLES[settings.background]}
       >
         <Canvas
           className="!absolute inset-0"
           shadows
           dpr={dpr}
-          gl={{ preserveDrawingBuffer: true, antialias: true, alpha: false }}
-          camera={{ position: [2.6, 1.2, 3.6], fov: 40 }}
+          // alpha → Transparent/Gradient backgrounds + alpha in PNG exports.
+          gl={{ preserveDrawingBuffer: true, antialias: true, alpha: true }}
+          camera={{ position: HOME_CAMERA_POSITION, fov: 40 }}
           onCreated={(state) => {
-            state.gl.toneMapping = THREE.ACESFilmicToneMapping;
+            // Tone mapping/exposure live in RendererBridge (ProductScene).
             viewerRef.current = {
               gl: state.gl,
               scene: state.scene,
@@ -177,17 +214,23 @@ export default function ProductViewer() {
           }}
         >
           <PerformanceMonitor
-            onDecline={() => setDpr(Math.max(1, perfDpr - 0.5))}
-            onIncline={() => setDpr(perfDpr)}
+            onDecline={() => setDpr(Math.max(1, baseDprRef.current - 0.5))}
+            onIncline={() => setDpr(baseDprRef.current)}
           />
           <Suspense fallback={<CanvasLoader />}>
             <ProductScene
               garment={garment}
-              exposure={materials.exposure}
               environment={ENV_PRESETS[env]}
-              studioBackground={toggles.studio}
-              ao={toggles.ao}
               lighting={lighting}
+              envRotationDeg={settings.envRotation}
+              exposure={materials.exposure}
+              toneMapping={settings.toneMapping}
+              background={settings.background}
+              lights={settings.lights}
+              shadows={settings.shadows}
+              effects={settings.effects}
+              shadowMapSize={qualityCfg.shadowMapSize}
+              multisampling={qualityCfg.multisampling}
             />
           </Suspense>
           <OrbitControls
@@ -201,14 +244,20 @@ export default function ProductViewer() {
             dampingFactor={0.08}
             minDistance={2.2}
             maxDistance={9}
-            minPolarAngle={0.2}
-            maxPolarAngle={Math.PI - 0.3}
+            // Near-pole limits so the Top/Bottom camera presets can land.
+            minPolarAngle={0.05}
+            maxPolarAngle={Math.PI - 0.05}
           />
+          <CameraRig apiRef={settings.cameraApiRef} controlsRef={controlsRef} />
+          <PerfTracker statsRef={settings.perfRef} />
           <AdaptiveDpr pixelated />
         </Canvas>
 
         {/* Left vertical toolbar */}
         <ViewerToolbar />
+
+        {/* Live renderer stats (toggled from the Performance section) */}
+        {settings.showPerf && <PerfOverlay statsRef={settings.perfRef} />}
 
         {/* Reset camera (bottom-left) */}
         <button

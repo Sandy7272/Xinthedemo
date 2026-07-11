@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useStudio } from "./studio-context";
+import { useViewerSettings } from "./viewer/viewer-settings-context";
 import { cn } from "@/lib/cn";
 
 function ToolButton({
@@ -45,6 +46,7 @@ function ToolButton({
 /** Vertical toolbar overlaid on the left of the 3D viewer. */
 export function ViewerToolbar() {
   const { toggles, toggle } = useStudio();
+  const { background, setBackground } = useViewerSettings();
 
   return (
     <div className="absolute left-3 top-3 z-10 flex w-[52px] flex-col gap-1 rounded-2xl border border-line bg-white/90 p-1.5 shadow-card backdrop-blur-xl">
@@ -78,11 +80,13 @@ export function ViewerToolbar() {
         active={toggles.textures}
         onClick={() => toggle("textures")}
       />
+      {/* Quick toggle between HDR backdrop and the studio preset — the
+          Environment inspector section offers the full background list. */}
       <ToolButton
         icon={Globe}
         label="HDRI"
-        active={!toggles.studio}
-        onClick={() => toggle("studio")}
+        active={background === "hdr"}
+        onClick={() => setBackground(background === "hdr" ? "studio" : "hdr")}
       />
     </div>
   );
